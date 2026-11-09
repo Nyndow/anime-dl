@@ -90,6 +90,10 @@ downloader is set in the settings.
 
 ### 4. Download
 
+Each episode shows its own progress line:
+
+![Downloading episodes with aria2](assets/download-aria2.png)
+
 Episodes are downloaded one after the other into:
 
 ```
