@@ -1,4 +1,4 @@
-# anime-dl
+# anime-dl (anime downloader)
 
 **anime-dl** is a CLI tool to search and download anime episodes from
 https://animeheaven.me quickly and easily.
