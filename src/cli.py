@@ -4,6 +4,8 @@ import os
 
 import questionary
 import requests
+from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
+from questionary.prompts.common import InquirerControl
 
 import downloader
 import settings
@@ -63,12 +65,77 @@ def choose_episodes(show: dict) -> tuple[str, list[dict]]:
         pause("No episodes found.")
         return title, []
 
+    ticked: list[int] = []  # positions in `eps` ticked when the page is shown
+    while True:
+        picked = episode_checkbox(title, eps, ticked)
+        if picked is None or picked == []:
+            return title, []
+        if isinstance(picked, list):
+            return title, eps if ALL in picked else [eps[i] for i in sorted(picked)]
+        _, ticked = picked  # (RANGE, what was ticked when <r> was pressed)
+        span = choose_range(eps)
+        if span:
+            start, end = span
+            ticked = sorted(set(ticked) | set(range(start, end + 1)))
+
+
+RANGE = "__range__"
+
+
+def episode_checkbox(title: str, eps: list[dict], ticked: list[int]):
+    """The episode checkbox, with `ticked` positions pre-ticked.
+
+    Returns the ticked values (ALL and/or positions in `eps`), (RANGE, ticked
+    positions) if <r> was pressed, or None on Ctrl+C.
+    """
     choices = [questionary.Choice(f"Select all ({len(eps)})", value=ALL)]
-    choices += [questionary.Choice(f"Episode {e['number']:>4}   {e['released']}", value=e) for e in eps]
-    picked = questionary.checkbox(f"{title} — SPACE to select, ENTER to confirm:", choices=choices).ask()
-    if not picked:
-        return title, []
-    return title, eps if ALL in picked else picked
+    choices += [
+        questionary.Choice(f"Episode {e['number']:>4}   {e['released']}", value=i, checked=i in ticked)
+        for i, e in enumerate(eps)
+    ]
+    question = questionary.checkbox(
+        f"{title} — SPACE to select, ENTER to confirm:",
+        choices=choices,
+        initial_choice=ticked[0] if ticked else None,
+        instruction="(SPACE select, <a> toggle all, <r> pick a range)",
+    )
+
+    extra = KeyBindings()
+
+    @extra.add("r", eager=True)
+    def _range(event):
+        controls = [c for c in event.app.layout.find_all_controls() if isinstance(c, InquirerControl)]
+        now = [v for v in controls[0].selected_options if v != ALL] if controls else []
+        event.app.exit(result=(RANGE, now))
+
+    app = question.application
+    app.key_bindings = merge_key_bindings([app.key_bindings, extra])
+    return question.ask()
+
+
+def choose_range(eps: list[dict]) -> tuple[int, int] | None:
+    """Ask From (Start or an episode) then To (a later episode or Fin).
+
+    Returns (start, end) positions in `eps`, both included, or None if cancelled.
+    """
+    def label(e: dict) -> str:
+        return f"Episode {e['number']:>4}   {e['released']}"
+
+    first, last = eps[0]["number"], eps[-1]["number"]
+    from_choices = [questionary.Choice(f"Start (episode {first})", value=0)]
+    from_choices += [questionary.Choice(label(e), value=i) for i, e in enumerate(eps)]
+    from_choices.append(questionary.Choice("◂ Back", value=BACK))
+    start = questionary.select("From:", choices=from_choices).ask()
+    if start in (None, BACK):
+        return None
+
+    to_choices = [questionary.Choice(label(e), value=i) for i, e in enumerate(eps) if i >= start]
+    to_choices.append(questionary.Choice(f"Fin (episode {last})", value=len(eps) - 1))
+    to_choices.append(questionary.Choice("◂ Back", value=BACK))
+    end = questionary.select(f"From episode {eps[start]['number']} to:", choices=to_choices).ask()
+    if end in (None, BACK):
+        return None
+    return start, end
 
 
 def choose_tool() -> str | None:

@@ -10,7 +10,8 @@ It uses **aria2** and/or **wget** to ensure fast and reliable downloads.
 ## Features
 
 - Search shows available on **animeheaven.me**
-- Select one, several or all episodes directly from the terminal
+- Select one, several or all episodes directly from the terminal, or a range
+  (`Start → 12`, `5 → 12`, `20 → Fin`) for long shows
 - Download using **aria2** (several connections) or **wget**
 - Resume interrupted downloads: run the same selection again
 - One folder per show, with clean file names (`Durarara!! - E01.mp4`)
@@ -79,6 +80,14 @@ show from the results.
 
 Tick the episodes you want with **Space**, or tick **Select all**, then press
 **Enter**.
+
+For long shows, press **r** to pick a range instead:
+
+- **From**: `Start` or any episode
+- **To**: any later episode or `Fin` (the latest one)
+
+You come back to the list with the range ticked (added to what was already
+ticked); adjust it with **Space** if needed, then press **Enter**.
 
 ### 3. Choose the downloader
 
